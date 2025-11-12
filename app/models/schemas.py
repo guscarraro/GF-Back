@@ -18,6 +18,8 @@ class LancamentoIn(BaseModel):
     parcela_atual: int = Field(default=1, ge=1)
     status: constr(pattern="^(pago|pendente|cancelado)$") = "pendente"
     previsao: bool = False
+    # front não precisa mandar, o back preenche para parcelados
+    parent_id: Optional[str] = None
 
 
 class Lancamento(LancamentoIn):
