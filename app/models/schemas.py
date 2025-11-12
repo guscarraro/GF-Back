@@ -62,7 +62,7 @@ class MetaResumo(BaseModel):
 # ===================== Planejamento =====================
 
 class PlanejamentoOut(BaseModel):
-    mes: constr(regex=r"^\d{4}-\d{2}$")  # ex: "2025-11"
+    mes: str  # ex: "2025-11"
     receita_mes: float
     metas: Dict[str, MetaResumo]         # chave = categoria
     total_alvo: float
