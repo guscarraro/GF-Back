@@ -16,4 +16,4 @@ def health():
 
 app.include_router(auth.router)
 app.include_router(gastos.router)
-app.include_router(metas.router)   # << NOVO
+app.include_router(metas.router)  
