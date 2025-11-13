@@ -20,8 +20,7 @@ def listar_por_mes(mes: Optional[str] = None) -> List[dict]:
     if mes:
         q = q.eq("competencia", mes)
     resp = q.execute()
-    data = resp.data or []
-    return data
+    return resp.data or []
 
 
 def obter(id_: str) -> Optional[dict]:
@@ -38,15 +37,23 @@ def criar(body: LancamentoIn) -> dict:
     Retorna sempre a 1ª parcela criada (a do mês atual).
     """
     payload = body.model_dump()
+
+    # ⚠ normaliza tipos não-JSON (date / Decimal)
+    if isinstance(payload.get("data"), date):
+        payload["data"] = payload["data"].isoformat()
+
+    # pydantic manda Decimal -> vira float
+    payload["valor"] = float(payload["valor"])
     total = float(payload["valor"])
     n_parcelas = int(payload.get("parcelas_total") or 1)
 
-    # caso simples: sem parcelas
+    # ----- caso simples: sem parcelas -----
     if n_parcelas <= 1:
         resp = supabase.table(TABLE).insert(payload).execute()
-        return resp.data[0]
+        data = resp.data or []
+        return data[0]
 
-    # parcelado
+    # ----- caso parcelado -----
     parent = str(uuid4())
 
     # valor por parcela com ajuste na última (pra não perder centavos)
@@ -61,8 +68,11 @@ def criar(body: LancamentoIn) -> dict:
             # última parcela pega o resto
             valores.append(round(total - acumulado, 2))
 
-    # data base
-    data_base: date = payload["data"]
+    # data base: usa body.data (date) se tiver, senão parseia a string do payload
+    if isinstance(body.data, date):
+        data_base = body.data
+    else:
+        data_base = date.fromisoformat(payload["data"])
 
     linhas = []
     for i in range(1, n_parcelas + 1):
@@ -96,6 +106,12 @@ def atualizar(id_: str, body: LancamentoIn) -> Optional[dict]:
     Atualiza apenas a linha informada (não mexe nas demais parcelas).
     """
     payload = body.model_dump()
+
+    if isinstance(payload.get("data"), date):
+        payload["data"] = payload["data"].isoformat()
+
+    payload["valor"] = float(payload["valor"])
+
     resp = supabase.table(TABLE).update(payload).eq("id", id_).execute()
     data = resp.data or []
     return data[0] if data else None
